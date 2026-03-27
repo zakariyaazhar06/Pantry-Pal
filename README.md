@@ -1,14 +1,15 @@
 # Pantry-Pal
-A small app for fridge management to help us 
+A small app for grocery management to help track items expiry dates
+and offer suitible recepice to stop users wasting food as well as 
+meeting their dietry needs.
 
 ## Team
-- Alice - Barcode scanner & API integration
-- Bob - Fridge management UI
-- Carol - Database & notifications
-- Dave - Recipes & medical warnings
+- Zaki - UI Design
+- Mikael - Front End
+- Ateeb - Backend
 
 ## Features
-- Scan barcodes to add items quickly
+- Scan barcodes to get nutritional data
 - Track expiry dates with notifications
 - View nutritional information
 - Get recipe suggestions from expiring items
@@ -25,8 +26,5 @@ A small app for fridge management to help us
 2. Run `flutter pub get`
 3. Run `flutter run`
 
-## Timeline
-8 weeks (Jan 15 - Mar 10, 2024)
-
 ## Project Status
-In Development - MVP expected March 2024
+In Development - MVP expected April 2026
