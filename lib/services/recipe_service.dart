@@ -1,8 +1,10 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 
 class RecipeService {
-  static const String _apiKey = 'd43fc4adbb5649fd8ed2382c5d121bfa';
+  static const String _apiKey = 'fae0d4dd4c324b49bdc238f690d13c2b';
   static const String _baseUrl = 'https://api.spoonacular.com/recipes';
 
   // Spoonacular intolerances parameter mapping
@@ -33,32 +35,54 @@ class RecipeService {
     final intolerances = allRestrictions
         .where((a) => _allergenToIntolerance.containsKey(a))
         .map((a) => _allergenToIntolerance[a]!)
-        .toSet()
         .join(',');
 
-    var url =
-        '$_baseUrl/findByIngredients?ingredients=$ingredientString&number=10&ranking=2&ignorePantry=true&apiKey=$_apiKey';
+    // Random ranking (1 = maximise used, 2 = minimise missed)
+    // Alternating gives variety on refresh
+    final ranking = Random().nextBool() ? 1 : 2;
 
-    // If we have intolerances, use complexSearch instead
-    if (intolerances.isNotEmpty) {
-      url =
-          '$_baseUrl/complexSearch?includeIngredients=$ingredientString&intolerances=$intolerances&number=10&addRecipeInformation=false&apiKey=$_apiKey';
-    }
+    try {
+      if (intolerances.isNotEmpty) {
+        // MUST use complexSearch for allergens. 
+        // Note: fillIngredients=true breaks complexSearch on Spoonacular's free tier, so we omit it.
+        final url =
+            '$_baseUrl/complexSearch?includeIngredients=$ingredientString'
+            '&intolerances=$intolerances'
+            '&number=10'
+            '&sort=random'
+            '&apiKey=$_apiKey';
 
-    final response = await http.get(Uri.parse(url));
+        debugPrint('Recipe URL (complex): $url');
+        final response = await http.get(Uri.parse(url));
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final List<dynamic> results = data['results'] ?? [];
+          return results.map((json) => Recipe.fromComplexJson(json, true)).toList();
+        } else {
+          throw Exception('Failed to fetch recipes (status ${response.statusCode})');
+        }
+      }
 
-      // complexSearch returns {results: [...]}
-      // findByIngredients returns [...]
-      final List<dynamic> results = intolerances.isNotEmpty
-          ? (data['results'] ?? [])
-          : data;
+      // Default: findByIngredients (better ingredient matching when no allergens present)
+      final url =
+          '$_baseUrl/findByIngredients?ingredients=$ingredientString'
+          '&number=10'
+          '&ranking=$ranking'
+          '&ignorePantry=true'
+          '&apiKey=$_apiKey';
 
-      return results.map((json) => Recipe.fromComplexJson(json, intolerances.isNotEmpty)).toList();
-    } else {
-      throw Exception('Failed to fetch recipes');
+      debugPrint('Recipe URL (find): $url');
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((json) => Recipe.fromComplexJson(json, false)).toList();
+      } else {
+        throw Exception('Failed to fetch recipes (status ${response.statusCode})');
+      }
+    } catch (e) {
+      throw Exception('Failed to fetch recipes: $e');
     }
   }
 

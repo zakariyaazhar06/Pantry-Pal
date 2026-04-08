@@ -35,25 +35,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
   });
 
   try {
-    // Get pantry items
-    final items = await _pantryService
-        .getPantryStream(_auth.uid!)
-        .first;
-
-    if (items.isEmpty) {
-      setState(() {
-        _loading = false;
-        _error = 'Add items to your pantry first!';
-      });
-      return;
-    }
-
-    // Prioritise expiring soon items first
-    items.sort((a, b) => a.expiryDate.compareTo(b.expiryDate));
-    final ingredients = items.take(5).map((i) => i.name).toList();
-    setState(() => _pantryItems = items);
-
-    // Fetch user allergens + dietary from Firestore
+    // 1. Fetch user allergens + dietary from Firestore first
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(_auth.uid!)
@@ -68,6 +50,70 @@ class _RecipeScreenState extends State<RecipeScreen> {
       dietary = List<String>.from(data['dietary'] ?? []);
     }
 
+    // 2. Get pantry items
+    var items = await _pantryService
+        .getPantryStream(_auth.uid!)
+        .first;
+
+    if (items.isEmpty) {
+      setState(() {
+        _loading = false;
+        _error = 'Add items to your pantry first!';
+      });
+      return;
+    }
+
+    setState(() => _pantryItems = items); // Keep original list for the UI
+
+    // 3. Filter out pantry items that clearly violate allergens to un-confuse the API
+    const allergenKeywords = {
+      'Gluten': ['gluten', 'wheat', 'barley', 'rye', 'oats'],
+      'Dairy': ['milk', 'dairy', 'cheese', 'butter', 'cream', 'yogurt'],
+      'Eggs': ['egg', 'eggs'],
+      'Peanuts': ['peanut'],
+      'Tree Nuts': ['almond', 'cashew', 'walnut', 'pistachio', 'hazelnut'],
+      'Fish': ['fish', 'cod', 'salmon', 'tuna'],
+      'Shellfish': ['shrimp', 'prawn', 'crab', 'lobster'],
+      'Soy': ['soy', 'soya', 'tofu'],
+      'Sesame': ['sesame', 'tahini'],
+    };
+
+    if (allergens.isNotEmpty) {
+      items = items.where((item) {
+        final lower = item.name.toLowerCase();
+        for (final allergen in allergens) {
+          final keywords = allergenKeywords[allergen] ?? [allergen.toLowerCase()];
+          if (keywords.any((kw) => lower.contains(kw))) return false; // Skip item
+        }
+        return true;
+      }).toList();
+    }
+
+    // If safe items are empty after filtering
+    if (items.isEmpty) {
+      setState(() {
+        _recipes = [];
+        _loading = false;
+      });
+      return;
+    }
+
+    // 4. Prioritise safe, expiring soon items, plus random safe ones
+    items.sort((a, b) => a.expiryDate.compareTo(b.expiryDate));
+    final List<FoodItem> selectedItems = items.take(2).toList();
+    
+    if (items.length > 2) {
+      final remainingItems = items.skip(2).toList();
+      remainingItems.shuffle();
+      selectedItems.addAll(remainingItems.take(3));
+    }
+    
+    selectedItems.shuffle();
+    final ingredients = selectedItems.map((i) {
+      final parts = i.name.trim().split(' ');
+      return parts.last.toLowerCase();
+    }).toList();
+
     final recipes = await _recipeService.getRecipesByIngredients(
       ingredients,
       allergens: allergens,
@@ -78,15 +124,13 @@ class _RecipeScreenState extends State<RecipeScreen> {
       _recipes = recipes;
       _loading = false;
     });
-  } catch (e) {
-    debugPrint('Recipe load error: $e');
-    setState(() {
-      _error = e.toString().contains('status')
-          ? 'API error – check your key or try later.'
-          : 'Failed to load recipes. Try again.';
-      _loading = false;
-    });
-  }
+    } catch (e) {
+      debugPrint('Error loading recipes: $e');
+      setState(() {
+        _error = 'Error: $e';
+        _loading = false;
+      });
+    }
 }
 
   @override
@@ -251,6 +295,34 @@ class _RecipeScreenState extends State<RecipeScreen> {
                       child: const Text("Try Again",
                           style:
                               TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (_recipes.isEmpty)
+            SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.search_off_rounded,
+                        size: 60, color: Colors.grey[300]),
+                    const SizedBox(height: 12),
+                    Text("No recipes found.",
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 40),
+                      child: Text(
+                          "We couldn't find any recipes using these ingredients that also match your dietary filters. (e.g. asking for dairy-free but using milk).",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 13)),
                     ),
                   ],
                 ),

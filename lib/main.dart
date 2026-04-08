@@ -13,6 +13,7 @@ import 'models/food_item.dart';
 import 'recipe_screen.dart';
 import 'profile_screen.dart';
 import 'allergy_screen.dart';
+import 'nutrition_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,7 +66,7 @@ class _RootScreenState extends State<RootScreen> {
     HomeScreen(),
     PantryScreen(),
     RecipeScreen(),
-    SizedBox(),
+    NutritionScreen(),
     ProfileScreen(),
   ];
 
