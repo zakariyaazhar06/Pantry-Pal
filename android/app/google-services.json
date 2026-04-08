@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "593977252898",
+    "project_id": "pantry-pal-2c997",
+    "storage_bucket": "pantry-pal-2c997.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:593977252898:android:201f6ce15ca5bd69e4fe7b",
+        "android_client_info": {
+          "package_name": "com.example.pantry_frontend"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "593977252898-c8kqo3f7ae0vchh98ho927vh9hshbdo8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTjwMj4mA1mXk3osZGXcfEMbql_H7eBOY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "593977252898-c8kqo3f7ae0vchh98ho927vh9hshbdo8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "593977252898-69iu1j2p28s79onotpnbuln29mm1joqo.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.pantryPal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:593977252898:android:acb9f9d9c4fbba39e4fe7b",
+        "android_client_info": {
+          "package_name": "com.example.pantry_pal"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "593977252898-c8kqo3f7ae0vchh98ho927vh9hshbdo8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTjwMj4mA1mXk3osZGXcfEMbql_H7eBOY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "593977252898-c8kqo3f7ae0vchh98ho927vh9hshbdo8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "593977252898-69iu1j2p28s79onotpnbuln29mm1joqo.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.pantryPal"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
