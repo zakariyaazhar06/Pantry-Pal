@@ -14,6 +14,8 @@ import 'recipe_screen.dart';
 import 'profile_screen.dart';
 import 'allergy_screen.dart';
 import 'nutrition_screen.dart';
+import 'notifications_screen.dart';
+import 'settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -135,6 +137,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final AuthService _auth = AuthService();
   final PantryService _pantryService = PantryService();
+  String _currentSortOption = 'Soon To Be Expired';
 
   String _daysLeftLabel(FoodItem item) {
     final diff = item.expiryDate.difference(DateTime.now()).inDays;
@@ -152,8 +155,20 @@ class _HomeScreenState extends State<HomeScreen> {
         stream: _pantryService.getPantryStream(_auth.uid!),
         builder: (context, snapshot) {
           final pantry = snapshot.data ?? [];
-          final expiringSoon =
-              pantry.where((i) => i.tag == 'Expiring Soon').length;
+          
+          var sortedPantry = List<FoodItem>.from(pantry);
+          if (_currentSortOption == 'Alphabetically') {
+            sortedPantry.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+          } else if (_currentSortOption == 'Recently Added') {
+            sortedPantry.sort((a, b) => b.boughtDate.compareTo(a.boughtDate));
+          } else if (_currentSortOption == 'Soon To Be Expired') {
+            sortedPantry.sort((a, b) => a.expiryDate.compareTo(b.expiryDate));
+          }
+
+          final fresh = pantry.where((i) => i.tag == 'Fresh').length;
+          final expiringSoon = pantry.where((i) => i.tag == 'Expiring Soon').length;
+          final expired = pantry.where((i) => i.tag == 'Expired').length;
+          final totalItems = pantry.length;
 
           return CustomScrollView(
             slivers: [
@@ -189,9 +204,25 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           Row(
                             children: [
-                              _headerIconBtn(Icons.notifications_outlined),
+                              _headerIconBtn(
+                                Icons.notifications_outlined,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const NotificationsScreen(),
+                                  ),
+                                ),
+                              ),
                               const SizedBox(width: 8),
-                              _headerIconBtn(Icons.settings_outlined),
+                              _headerIconBtn(
+                                Icons.settings_outlined,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const SettingsScreen(),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -216,9 +247,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(width: 10),
                           _statCard(
-                            "1,358",
-                            "Calories Today",
-                            Icons.local_fire_department_outlined,
+                            pantry.length >= 2 ? "${pantry.length * 4}+" : "0",
+                            "Recipes Ready",
+                            Icons.soup_kitchen_outlined,
                             const Color(0xFFE8F5E9),
                             const Color(0xFF66BB6A),
                           ),
@@ -256,15 +287,58 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       Row(
                         children: [
-                          const Text("Sort by",
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.grey)),
-                          const Icon(Icons.keyboard_arrow_down,
-                              size: 16, color: Colors.grey),
-                          const SizedBox(width: 10),
-                          const Text("View all",
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.grey)),
+                          PopupMenuButton<String>(
+                            initialValue: _currentSortOption,
+                            onSelected: (String result) {
+                              setState(() {
+                                _currentSortOption = result;
+                              });
+                            },
+                            offset: const Offset(0, 25),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            child: Row(
+                              children: [
+                                const Text("Sort by",
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.grey)),
+                                const Icon(Icons.keyboard_arrow_down,
+                                    size: 16, color: Colors.grey),
+                              ],
+                            ),
+                            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                              const PopupMenuItem<String>(
+                                value: 'Alphabetically',
+                                height: 40,
+                                child: Text('Alphabetically', style: TextStyle(fontSize: 14)),
+                              ),
+                              const PopupMenuDivider(height: 1),
+                              const PopupMenuItem<String>(
+                                value: 'Recently Added',
+                                height: 40,
+                                child: Text('Recently Added', style: TextStyle(fontSize: 14)),
+                              ),
+                              const PopupMenuDivider(height: 1),
+                              const PopupMenuItem<String>(
+                                value: 'Soon To Be Expired',
+                                height: 40,
+                                child: Text('Soon To Be Expired', style: TextStyle(fontSize: 14)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 15),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const PantryScreen(initialFilter: 'All'),
+                                ),
+                              );
+                            },
+                            child: const Text("View all",
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+                          ),
                         ],
                       ),
                     ],
@@ -275,7 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // ── FOOD TILES ──
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                sliver: pantry.isEmpty
+                sliver: sortedPantry.isEmpty
                     ? SliverToBoxAdapter(
                         child: Center(
                           child: Padding(
@@ -289,8 +363,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       )
                     : SliverList(
                         delegate: SliverChildBuilderDelegate(
-                          (context, index) => _foodTile(pantry[index]),
-                          childCount: pantry.length,
+                          (context, index) => _foodTile(sortedPantry[index]),
+                          childCount: sortedPantry.length,
                         ),
                       ),
               ),
@@ -340,9 +414,9 @@ SliverToBoxAdapter(
         Row(
           children: [
             _actionBtn(
-              "Allergies",
-              "Manage Allergens",
-              Icons.warning_amber_rounded,
+              "Dietary Prefs",
+              "Set your filters",
+              Icons.health_and_safety_outlined,
               const Color(0xFFFFEBEE),
               const Color(0xFFEF5350),
               () => Navigator.push(
@@ -371,38 +445,64 @@ SliverToBoxAdapter(
   ),
 ),
 
-              // ── TODAY'S MACROS ──
+              // ── SMART STORAGE TIPS ──
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Today's Macros",
+                      const Text("Daily Tip",
                           style: TextStyle(
                               fontSize: 17, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
                       Container(
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: const Color(0xFFF9FAFB),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.shade100),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 10,
+                              color: Colors.black.withOpacity(0.02),
+                              blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                        child: Column(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _macroRow("Protein", 0.45, "68g / 150g",
-                                const Color(0xFFB5A642), true),
-                            _macroRow("Carbohydrates", 0.72, "180g / 250g",
-                                const Color(0xFF66BB6A), false),
-                            _macroRow("Fat", 0.30, "45g / 70g",
-                                const Color(0xFF37474F), false),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFFF9C4),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.lightbulb_outline,
+                                  color: Color(0xFFFBC02D), size: 24),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text("Smart Storage",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                          color: Color(0xFF374151))),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _getDailyTip(),
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey[600],
+                                        height: 1.4),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -417,14 +517,17 @@ SliverToBoxAdapter(
     );
   }
 
-  Widget _headerIconBtn(IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(7),
-      decoration: BoxDecoration(
-        color: Colors.white12,
-        borderRadius: BorderRadius.circular(10),
+  Widget _headerIconBtn(IconData icon, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          color: Colors.white12,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
-      child: Icon(icon, color: Colors.white, size: 18),
     );
   }
 
@@ -608,38 +711,14 @@ SliverToBoxAdapter(
     );
   }
 
-  Widget _macroRow(String label, double progress, String amount,
-      Color color, bool isFirst) {
-    return Column(
-      children: [
-        if (!isFirst) Divider(height: 1, color: Colors.grey.shade100),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(label,
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w500)),
-                  Text(amount,
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.grey)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: progress,
-                backgroundColor: Colors.grey[200],
-                color: color,
-                minHeight: 6,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+  String _getDailyTip() {
+    final tips = [
+      "Store your onions and potatoes in separate cabinets! Onions release moisture that makes potatoes sprout faster.",
+      "Keep bananas away from other fruit to slow ripening, or put them together if you want avocados to ripen faster!",
+      "Herbs like cilantro and parsley last much longer if you trim the stems and store them in a glass of water in the fridge.",
+      "Don't store milk in the fridge door! The temperature fluctuates too much. Keep it on a shelf towards the back.",
+      "Wrap celery, broccoli, and lettuce in tin foil before storing in the crisper. It stays crisp for weeks!"
+    ];
+    return tips[DateTime.now().day % tips.length];
   }
 }

@@ -403,18 +403,27 @@ class _RecipeScreenState extends State<RecipeScreen> {
                           fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
                   // Ingredient tags
-                  Row(
-                    children: [
-                      _ingredientTag(
-                          "${recipe.usedIngredientCount} ingredients matched",
-                          Colors.green),
-                      const SizedBox(width: 8),
-                      if (recipe.missedIngredientCount > 0)
-                        _ingredientTag(
-                            "${recipe.missedIngredientCount} missing",
-                            Colors.orange),
-                    ],
-                  ),
+                  if (recipe.usedIngredientCount > 0 || recipe.missedIngredientCount > 0)
+                    Row(
+                      children: [
+                        if (recipe.usedIngredientCount > 0) ...[
+                          _ingredientTag(
+                              "${recipe.usedIngredientCount} ingredients matched",
+                              Colors.green),
+                          const SizedBox(width: 8),
+                        ],
+                        if (recipe.missedIngredientCount > 0)
+                          _ingredientTag(
+                              "${recipe.missedIngredientCount} missing",
+                              Colors.orange),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        _ingredientTag("Dietary/Allergen Safe", Colors.blue),
+                      ],
+                    ),
                   if (recipe.usedIngredients.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
